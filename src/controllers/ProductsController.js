@@ -81,6 +81,30 @@ class ProductsController {
 
     response.json(ProductsWithIngredients);
   }
+
+  async update(request, response) {
+    const { id } = request.params;
+
+    const product = await knex("products").where({ id }).first();
+    console.log(product);
+
+    if (!product) {
+      response.status(400).json("Produto não encontrado");
+    } else {
+      const { name, description, price, category_id } = request.body;
+      await knex("products")
+        .update({
+          name,
+          description,
+          price,
+          category_id,
+          updated_at: knex.fn.now(),
+        })
+        .where({ id });
+      response.json({ name, description, price, category_id });
+    }
+    response.status(400).json();
+  }
 }
 
 module.exports = ProductsController;
