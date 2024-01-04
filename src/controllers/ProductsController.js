@@ -1,19 +1,30 @@
 const knex = require("../database/knex");
 
+const DiskStorage = require("../providers/DiskStorage");
+
+const diskStorage = new DiskStorage();
+
 class ProductsController {
   async create(request, response) {
-    const { name, description, price, category_id, image, ingredients } =
-      request.body;
+    const { name, description, price, category_id, ingredients } = request.body;
 
     const [product_id] = await knex("products").insert({
       name,
       description,
       price,
       category_id,
-      image,
     });
 
-    const ingredientsInsert = ingredients.map((ingredient) => {
+    if (request.file) {
+      const img = request.file.filename;
+
+      await diskStorage.saveFile(img);
+
+      await knex("products").update({ image: img }).where({ id: product_id });
+    }
+
+    const ingredientsList = ingredients.split(",");
+    const ingredientsInsert = ingredientsList.map((ingredient) => {
       return {
         product_id,
         name: ingredient,
@@ -42,7 +53,12 @@ class ProductsController {
   async delete(request, response) {
     const { id } = request.params;
 
+    const product = await knex("products").where({ id }).first();
+    console.log(product);
+
     await knex("products").delete().where({ id });
+
+    await diskStorage.deleteFile(product.image);
 
     response.status(201).json("Produto deletado.");
   }
@@ -86,11 +102,19 @@ class ProductsController {
     const { id } = request.params;
 
     const product = await knex("products").where({ id }).first();
-    console.log(product);
 
     if (!product) {
       response.status(400).json("Produto não encontrado");
     } else {
+      //se encontrou o produto verifica a imagem
+      if (request.file) {
+        const img = request.file.filename;
+
+        await diskStorage.deleteFile(product.image);
+        const image = await diskStorage.saveFile(img);
+        await knex("products").update({ image }).where({ id });
+      }
+
       const { name, description, price, category_id } = request.body;
       await knex("products")
         .update({
