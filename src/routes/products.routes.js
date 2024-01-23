@@ -20,7 +20,7 @@ productsRoutes.post(
 productsRoutes.get("/:id", productsController.show);
 productsRoutes.delete("/:id", ensureAuthenticated, productsController.delete);
 productsRoutes.get("/", productsController.index);
-productsRoutes.put(
+productsRoutes.patch(
   "/:id",
   ensureAuthenticated,
   upload.single("img"),

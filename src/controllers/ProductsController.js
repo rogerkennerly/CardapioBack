@@ -15,6 +15,8 @@ class ProductsController {
       category_id,
     });
 
+    console.log(request.body, request.file);
+
     if (request.file) {
       const img = request.file.filename;
 
@@ -23,17 +25,19 @@ class ProductsController {
       await knex("products").update({ image: img }).where({ id: product_id });
     }
 
-    const ingredientsList = ingredients.split(",");
-    const ingredientsInsert = ingredientsList.map((ingredient) => {
-      return {
-        product_id,
-        name: ingredient,
-      };
-    });
+    if (ingredients) {
+      const ingredientsList = ingredients.split(",");
+      const ingredientsInsert = ingredientsList.map((ingredient) => {
+        return {
+          product_id,
+          name: ingredient,
+        };
+      });
 
-    await knex("ingredients").insert(ingredientsInsert);
+      await knex("ingredients").insert(ingredientsInsert);
+    }
 
-    response.json();
+    response.json("Produto cadastrado com sucesso.");
   }
 
   async show(request, response) {
@@ -64,11 +68,27 @@ class ProductsController {
   }
 
   async index(request, response) {
-    const { name, ingredients } = request.query;
+    const { name, ingredients, category_id } = request.query;
 
     let products;
 
-    if (ingredients) {
+    if (category_id) {
+      if (name) {
+        products = await knex("ingredients")
+          .select(["products.*"])
+          .where("products.category_id", category_id)
+          .andWhere(function () {
+            this.andWhereLike("products.name", `%${name}%`).orWhereLike(
+              "ingredients.name",
+              `%${name}%`
+            );
+          })
+          .innerJoin("products", "products.id", "ingredients.product_id")
+          .groupBy("products.id");
+      } else {
+        products = await knex("products").where({ category_id });
+      }
+    } else if (ingredients) {
       const filterIngredients = ingredients
         .split(",")
         .map((ingredient) => ingredient.trim());
@@ -78,8 +98,10 @@ class ProductsController {
         .whereLike("products.name", `%${name}%`)
         .whereIn("ingredients.name", filterIngredients)
         .innerJoin("products", "products.id", "ingredients.product_id");
-    } else {
+    } else if (name) {
       products = await knex("products").whereLike("name", `%${name}%`);
+    } else {
+      products = await knex("products");
     }
 
     const ingredientsList = await knex("ingredients");
@@ -110,7 +132,9 @@ class ProductsController {
       if (request.file) {
         const img = request.file.filename;
 
-        await diskStorage.deleteFile(product.image);
+        if (product.image) {
+          await diskStorage.deleteFile(product.image);
+        }
         const image = await diskStorage.saveFile(img);
         await knex("products").update({ image }).where({ id });
       }
@@ -125,7 +149,7 @@ class ProductsController {
           updated_at: knex.fn.now(),
         })
         .where({ id });
-      response.json({ name, description, price, category_id });
+      response.json("Produto atualizado com sucesso!");
     }
     response.status(400).json();
   }

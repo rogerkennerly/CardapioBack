@@ -2,9 +2,15 @@ const knex = require("../database/knex");
 
 class IngredientsController {
   async show(request, response) {
-    const { id } = request.params;
+    const { id, product_id } = request.params;
 
-    const ingredients = await knex("ingredients").where({ id }).first();
+    let ingredients;
+
+    if (product_id) {
+      ingredients = await knex("ingredients").where({ product_id });
+    } else {
+      ingredients = await knex("ingredients").where({ id }).first();
+    }
 
     response.json(ingredients);
   }
