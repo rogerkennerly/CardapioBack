@@ -1,6 +1,6 @@
 # Cardapio Online - Back-end com Node.js
 
-O sistema se trata de um cardapio online com produtos separados por categorias, o usuário cadastrado poderá favoritar produtos ou adiciona-los ao seu pedido.
+API da aplicação de um cardapio online. Manipulação de usuários, produtos, categorias e ingredientes.
 
 ## Instalação
 
